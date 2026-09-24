@@ -1,0 +1,324 @@
+```cpp
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <string>
+
+using namespace std;
+
+class ClimateObserver
+{
+public:
+    virtual ~ClimateObserver() {}
+
+    virtual void update(double temperature,
+                        double humidity,
+                        double pressure) = 0;
+
+    virtual string getName() const = 0;
+};
+
+class ClimateSubject
+{
+public:
+    virtual ~ClimateSubject() {}
+
+    virtual void attach(ClimateObserver* observer) = 0;
+    virtual void detach(ClimateObserver* observer) = 0;
+    virtual void notifyObservers() = 0;
+};
+
+class ClimateHub : public ClimateSubject
+{
+private:
+    vector<ClimateObserver*> observers;
+    double temperature;
+    double humidity;
+    double pressure;
+
+public:
+    ClimateHub()
+    {
+        temperature = 0;
+        humidity = 0;
+        pressure = 0;
+    }
+
+    void attach(ClimateObserver* observer) override
+    {
+        if (observer == nullptr)
+            return;
+
+        auto it = find(observers.begin(), observers.end(), observer);
+
+        if (it == observers.end())
+        {
+            observers.push_back(observer);
+
+            cout << "[Khab] Pidkliucheno prystii: "
+                 << observer->getName() << endl;
+        }
+    }
+
+    void detach(ClimateObserver* observer) override
+    {
+        auto it = find(observers.begin(), observers.end(), observer);
+
+        if (it != observers.end())
+        {
+            cout << "[Khab] Vidkliucheno prystii: "
+                 << (*it)->getName() << endl;
+
+            observers.erase(it);
+        }
+    }
+
+    void notifyObservers() override
+    {
+        for (ClimateObserver* observer : observers)
+        {
+            observer->update(
+                temperature,
+                humidity,
+                pressure
+            );
+        }
+    }
+
+    void setMeasurements(double newTemperature,
+                         double newHumidity,
+                         double newPressure)
+    {
+        temperature = newTemperature;
+        humidity = newHumidity;
+        pressure = newPressure;
+
+        cout << "\n[Khab] Novi pokaznyky:" << endl;
+        cout << "Temperatura: " << temperature << " C" << endl;
+        cout << "Vologist: " << humidity << " %" << endl;
+        cout << "Tysk: " << pressure << " hPa" << endl;
+
+        notifyObservers();
+    }
+
+    int getObserversCount() const
+    {
+        return observers.size();
+    }
+};
+
+class AirConditioner : public ClimateObserver
+{
+private:
+    string name;
+    double temperatureLimit;
+    bool isOn;
+
+public:
+    AirConditioner(string deviceName, double limit)
+    {
+        name = deviceName;
+        temperatureLimit = limit;
+        isOn = false;
+    }
+
+    void update(double temperature,
+                double humidity,
+                double pressure) override
+    {
+        if (temperature > temperatureLimit && !isOn)
+        {
+            isOn = true;
+
+            cout << "[" << name << "] "
+                 << "Temperatura " << temperature
+                 << " C > " << temperatureLimit
+                 << " C - kondytsioner UVIMKNENO."
+                 << endl;
+        }
+        else if (temperature <= temperatureLimit && isOn)
+        {
+            isOn = false;
+
+            cout << "[" << name << "] "
+                 << "Temperatura " << temperature
+                 << " C - kondytsioner VYMKENO."
+                 << endl;
+        }
+        else
+        {
+            cout << "[" << name << "] "
+                 << "Stan bez zmin: "
+                 << (isOn ? "uvimkneno" : "vymkneno")
+                 << endl;
+        }
+    }
+
+    string getName() const override
+    {
+        return name;
+    }
+};
+
+class Humidifier : public ClimateObserver
+{
+private:
+    string name;
+    double humidityLimit;
+    bool isOn;
+
+public:
+    Humidifier(string deviceName, double limit)
+    {
+        name = deviceName;
+        humidityLimit = limit;
+        isOn = false;
+    }
+
+    void update(double temperature,
+                double humidity,
+                double pressure) override
+    {
+        if (humidity < humidityLimit && !isOn)
+        {
+            isOn = true;
+
+            cout << "[" << name << "] "
+                 << "Vologist " << humidity
+                 << " % < " << humidityLimit
+                 << " % - zvolozhuvach UVIMKNENO."
+                 << endl;
+        }
+        else if (humidity >= humidityLimit && isOn)
+        {
+            isOn = false;
+
+            cout << "[" << name << "] "
+                 << "Vologist " << humidity
+                 << " % - zvolozhuvach VYMKENO."
+                 << endl;
+        }
+        else
+        {
+            cout << "[" << name << "] "
+                 << "Stan bez zmin: "
+                 << (isOn ? "uvimkneno" : "vymkneno")
+                 << endl;
+        }
+    }
+
+    string getName() const override
+    {
+        return name;
+    }
+};
+
+class SmartDisplay : public ClimateObserver
+{
+private:
+    string name;
+
+public:
+    SmartDisplay(string deviceName)
+    {
+        name = deviceName;
+    }
+
+    void update(double temperature,
+                double humidity,
+                double pressure) override
+    {
+        cout << "[" << name << "] "
+             << "Pokaznyky: "
+             << "temperatura = " << temperature << " C, "
+             << "vologist = " << humidity << " %, "
+             << "tysk = " << pressure << " hPa"
+             << endl;
+    }
+
+    string getName() const override
+    {
+        return name;
+    }
+};
+
+int main()
+{
+    ClimateHub hub;
+
+    AirConditioner conditioner(
+        "Kondytsioner vitalni", 26.0
+    );
+
+    Humidifier humidifier(
+        "Zvolozhuvach spalni", 40.0
+    );
+
+    SmartDisplay display(
+        "Rozumnyi dysplei"
+    );
+
+    cout << "========================================" << endl;
+    cout << "          ROZUMNYI DIM" << endl;
+    cout << "          Patern Sposterihach" << endl;
+    cout << "========================================" << endl;
+
+    cout << "\n--- Pidkliuchennia prystroiv ---" << endl;
+
+    hub.attach(&conditioner);
+    hub.attach(&display);
+
+    cout << "Kilkist prystroiv: "
+         << hub.getObserversCount()
+         << endl;
+
+    cout << "\n--- Pershe vymiriuvannia ---" << endl;
+
+    hub.setMeasurements(
+        28.0,
+        35.0,
+        1012.0
+    );
+
+    cout << "\n--- Pidkliuchennia zvolozhuvacha ---" << endl;
+
+    hub.attach(&humidifier);
+
+    cout << "Kilkist prystroiv: "
+         << hub.getObserversCount()
+         << endl;
+
+    cout << "\n--- Druhe vymiriuvannia ---" << endl;
+
+    hub.setMeasurements(
+        29.5,
+        30.0,
+        1011.0
+    );
+
+    cout << "\n--- Vidkliuchennia kondytsionera ---" << endl;
+
+    hub.detach(&conditioner);
+
+    cout << "Kilkist prystroiv: "
+         << hub.getObserversCount()
+         << endl;
+
+    cout << "\n--- Tretie vymiriuvannia ---" << endl;
+
+    hub.setMeasurements(
+        23.0,
+        45.0,
+        1013.0
+    );
+
+    cout << "\n========================================" << endl;
+    cout << "Robotu prohramy zaversheno." << endl;
+    cout << "Aktyvnykh prystroiv: "
+         << hub.getObserversCount()
+         << endl;
+    cout << "========================================" << endl;
+
+    return 0;
+}
+```
